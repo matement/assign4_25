@@ -11,7 +11,7 @@ the private.py script
 
 Also add the TA in your project
 1. Go to ProjectSettings -> Members
-2. Add GEORGIOS XANTHAKIS as a Developer
+2. Add GEORGIOS XANTHAKIS (csdp1246) as a Developer
 
 ### Using the Script
 
