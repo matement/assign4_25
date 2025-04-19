@@ -19,7 +19,7 @@ Grid_T grid_init(Grid_T g, int v[9][9]){ /*initialises the grid*/
 
     for(i = 0; i<9; i++){
         for(j = 0; j<9; j++){
-            if(v[i][j] == 0){ /*if the value is 0 ithe cell doesnt have a valuse and has all posible values from 1 to 9*/
+            if(v[i][j] == 0){ /*if the value is 0 the cell doesnt have a valuse and has all posible values from 1 to 9*/
                 g.cell[i][j].choices[0] = 0;
                 g.cell[i][j].count = 9;
                 for(k = 1; k<10; k++){  /*set all the values from 1 to 9 as possible values*/
