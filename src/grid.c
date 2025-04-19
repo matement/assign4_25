@@ -111,14 +111,56 @@ Choice_T grid_iterate(Grid_T g, Choice_T t){	/* iterate over all choices in all 
                     c.n = n; /*get the value of the cell*/ 
                     return c; 
                 }
-                n = 1;
             }
-            j = 0; /*reset the column*/
+            n = 1; /*reset the value*/
         }
+        j = 0; /*reset the column*/
     }
     /*if there is no value return (0, 0, 0)*/
     none.i = 0;
     none.j = 0;
     none.n = 0;
     return none;
+}
+
+int grid_unique(Grid_T g){ /*return the unique flag for g*/
+    return g.unique; 
+}
+
+Choice_T grid_exists_unique(Grid_T g){ /*return a cell with a unique choice, if one exists, otherwise return (0,0,0)*/
+    int i, j;
+    Choice_T none;
+    none.i = 0;
+    none.j = 0;
+    none.n = 0;
+
+    for(i = 0; i<9; i++){
+        for(j = 0; j<9; j++){
+            if(g.cell[i][j].choices[0] == 0 && g.cell[i][j].count == 1){ /*if the cell doenst have a value and there is at least 1 choice*/
+                Choice_T c;
+                c.i = i; /*get the row and column of the cell*/
+                c.j = j;
+                c.n = g.cell[i][j].choices[1]; /*get the value of the cell*/
+                return c;
+            }
+        }
+    }
+    /*if there is no unique solution return (0, 0, 0)*/
+    none.i = 0;
+    none.j = 0;
+    none.n = 0;
+    return none;
+}
+
+Grid_T grid_clear_unique(Grid_T g) {
+    g.unique = 0;
+    return g;
+}
+
+Choice_T grid_read_value(Grid_T g, Choice_T c){ /*return value of i,j*/
+    Choice_T r;
+    r.i = c.i; /*get the row and column of the cell*/
+    r.j = c.j;
+    r.n = g.cell[c.i][c.j].choices[0]; /*get the value of the cell*/
+    return r;
 }
