@@ -55,8 +55,11 @@ static Grid_T sudoku_try_full(Grid_T g){
 
 Grid_T sudoku_generate(int nelts, int unique){
     Grid_T g;
-    int i, j;
+    int i, j, pcount;
     int v[N][N];
+    struct {
+        int i, j;
+    }pos[81]; /*array to store the positions of the cells*/
 
     for(i = 0; i<N; i++){
         for(j = 0; j<N; j++){
@@ -65,7 +68,28 @@ Grid_T sudoku_generate(int nelts, int unique){
     }
     g = grid_init(g, v); /*initialise the grid with the values*/
 
-    g = sudoku_try_full(g);
+    srand(getpid()); /*seed the random number generator*/
+
+    g = sudoku_try_full(g); /*try to fill the grid*/
+
+    pcount = 0;
+    for(i = 0; i<N; i++){
+        for(j = 0; j<N; j++){
+            pos[pcount].i = i; /*store the positions of the cells*/
+            pos[pcount].j = j;
+            pcount++;
+        }
+    }
+
+    /*shuffle to later remove 81-nelts things*/
+    for(i = pcount-1; i<=0; i--){
+        int r = rand() % (i+1);
+        int tempi = pos[i].i; /*swap the positions of the cells*/
+        int tempj = pos[i].j;
+        
+        pos[i].i = pos[r].i;
+        pos[i].j = pos[r].j;
+    }
 
     return g;
 }
