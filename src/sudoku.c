@@ -2,10 +2,76 @@
 #include <string.h>
 
 
-Grid_T sudoku_solve(Grid_T g, Choice_T c){
+Grid_T sudoku_read(void){
+    int v[N][N];
+    Grid_T g;
+    int i, j;
+
+    for(i = 0; i<N; i++){
+        for(j = 0; j<N; j++){
+            if(scanf("%d", &v[i][j]) !=1){
+                fprintf(stderr, "Error reading puzzle");    /*read the values from the file*/
+                exit(1); 
+            }
+        }
+    }
+
+    g = grid_init(g, v); /*initialise the grid with the values*/
     return g;
 }
 
+void sudoku_print(FILE *s, Grid_T g){
+    int i, j;
+
+    for (i = 0; i < 9; i++) {
+        for (j = 0; j < 9; j++) {
+            fprintf(s, "%d", g.cell[i][j].choices[0]);
+            if (j < 8) {
+                fprintf(s, " "); /* space between the cells*/
+            }
+        }
+        fprintf(s, "\n"); /*end the */
+    }
+}
+
+Grid_T sudoku_solve(Grid_T g, Choice_T c)
+{
+    Choice_T next, last, zero;
+    Grid_T   g2, attempt;
+
+    /* zero choice for resets and completion checks */
+    zero.i = zero.j = zero.n = 0;
+
+    /* 1) Deterministic fill of all forced cells */
+    next = grid_exist_unique(g);
+    while (next.n != 0) {
+        g = grid_update(g, next);
+        g.unique = 1;
+        next = grid_exist_unique(g);
+    }
+
+    /* 2) If grid is complete, return it */
+    if (grid_iterate(g, zero).n == 0)
+        return g;
+
+    /* 3) Backtracking: start from c (initially zero), then advance */
+    last = c;
+    next = grid_iterate(g, last);
+    while (next.n != 0) {
+        g2      = grid_update(g, next);
+        attempt = sudoku_solve(g2, zero);
+        /* if solved, propagate up */
+        if (grid_iterate(attempt, zero).n == 0)
+            return attempt;
+        /* else try next candidate */
+        last = next;
+        next = grid_iterate(g, last);
+    }
+
+    /* 4) all candidates exhausted: failure, return original */
+    return g;
+
+}
 /**
  * tries to fill a sudoku grid recursively 
  * if it does return the grid else return how it was before
@@ -144,12 +210,21 @@ Grid_T sudoku_generate(int nelts, int unique){
 
 
 int  main(int argc, char *argv[]){
+    Grid_T g;
     if(argc == 1){ /*if the argumenst are sudoku*/
-       
-        return 0;
+        if (argc == 1) {
+            Choice_T c;
+            c.i = 0; /*initialise the cell*/
+            c.j = 0;
+            c.n = 0; /*initialise the value*/
+            g = sudoku_read();
+            sudoku_print(stderr, g);
+            g = sudoku_solve(g, c);
+            printf("Solved:\n");
+            sudoku_print(stdout, g);
+        }
     }
-    else if(argc == 2 && (strcmp(argv[0], "sudoku") == 0 && strcmp(argv[1], "-c") == 0)){ /*if the arguments are sudoku -c*/
-
+    else if (argc == 2 && strcmp(argv[1], "-c") == 0) {
         return 0;
     }
     else if(argc == 4 && strcmp(argv[1], "-g") == 0 && strcmp(argv[3], "-u") == 0){ /*if the arguments are sudoku -g nelts -u */

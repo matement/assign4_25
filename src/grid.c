@@ -17,20 +17,35 @@ Grid_T grid_init(Grid_T g, int v[9][9]){ /*initialises the grid*/
     int i, j, k;
     g.unique = 0;
 
-    for(i = 0; i<9; i++){
-        for(j = 0; j<9; j++){
-            if(v[i][j] == 0){ /*if the value is 0 the cell doesnt have a valuse and has all posible values from 1 to 9*/
+    /* First pass: set empty cells to all choices, and givens to their value */
+    for (i = 0; i < 9; i++) {
+        for (j = 0; j < 9; j++) {
+            if (v[i][j] == 0) { /* empty: all choices 1..9 */
                 g.cell[i][j].choices[0] = 0;
                 g.cell[i][j].count = 9;
-                for(k = 1; k<10; k++){  /*set all the values from 1 to 9 as possible values*/
+                for (k = 1; k < 10; k++) {
                     g.cell[i][j].choices[k] = 1;
                 }
-            }
-            else{   /*if it isnt zero then call grid_update_value to initalise the sigle value*/
+            } else { /* given: set only that value */
                 g = grid_update_value(g, i, j, v[i][j]);
             }
         }
     }
+
+    /* Second pass: eliminate givens from peers */
+    for (i = 0; i < 9; i++) {
+        for (j = 0; j < 9; j++) {
+            int val = v[i][j];
+            if (val != 0) {
+                Choice_T c;
+                c.i = i;
+                c.j = j;
+                c.n = val;
+                g = grid_update(g, c);
+            }
+        }
+    }
+
     return g;
 }
 
@@ -127,28 +142,32 @@ int grid_unique(Grid_T g){ /*return the unique flag for g*/
     return g.unique; 
 }
 
-Choice_T grid_exists_unique(Grid_T g){ /*return a cell with a unique choice, if one exists, otherwise return (0,0,0)*/
-    int i, j;
+Choice_T grid_exist_unique(Grid_T g){ /*return a cell with a unique choice, if one exists, otherwise return (0,0,0)*/
+    int i, j, k;
     Choice_T none;
-    none.i = 0;
-    none.j = 0;
-    none.n = 0;
+    none.i = none.j = none.n = 0;
 
-    for(i = 0; i<9; i++){
-        for(j = 0; j<9; j++){
-            if(g.cell[i][j].choices[0] == 0 && g.cell[i][j].count == 1){ /*if the cell doenst have a value and there is at least 1 choice*/
+    for (i = 0; i < 9; i++) {
+        for (j = 0; j < 9; j++) {
+            /* if cell is empty and exactly one choice remains */
+            if (g.cell[i][j].choices[0] == 0
+             && g.cell[i][j].count    == 1) {
+
                 Choice_T c;
-                c.i = i; /*get the row and column of the cell*/
+                c.i = i;
                 c.j = j;
-                c.n = g.cell[i][j].choices[1]; /*get the value of the cell*/
+                /* find which value k (1..9) is left */
+                for (k = 1; k <= 9; k++) {
+                    if (g.cell[i][j].choices[k] == 1) {
+                        c.n = k;
+                        break;
+                    }
+                }
                 return c;
             }
         }
     }
-    /*if there is no unique solution return (0, 0, 0)*/
-    none.i = 0;
-    none.j = 0;
-    none.n = 0;
+
     return none;
 }
 
