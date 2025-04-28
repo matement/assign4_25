@@ -49,7 +49,7 @@ Grid_T grid_init(Grid_T g, int v[9][9]){ /*initialises the grid*/
     return g;
 }
 
-Grid_T grid_update(Grid_T g, Choice_T c){	/* update value of c.i,c.j to c.n and eliminate c from choices in grid */
+Grid_T grid_update(Grid_T g, Choice_T c){	/* update value of c.i,c.j to c.n and eliminate c from choices in grid*/
     int i, j;
     int row, col, sRow, sCol; /*get the row and column of the cell*/
     int val;

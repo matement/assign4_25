@@ -17,7 +17,7 @@
 
 # Compiler and flags
 CC      := gcc
-CFLAGS  := -Wall -ansi -pedantic -MMD -MP
+CFLAGS  := -Wall -ansi -pedantic -MMD -MP 
 
 # Directories
 SRC_DIR := src

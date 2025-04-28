@@ -70,7 +70,6 @@ Grid_T sudoku_solve(Grid_T g, Choice_T c)
 
     /* 4) all candidates exhausted: failure, return original */
     return g;
-
 }
 /**
  * tries to fill a sudoku grid recursively 
