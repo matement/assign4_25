@@ -102,142 +102,71 @@ Grid_T sudoku_solve(Grid_T g, Choice_T c)
     /* 4) all candidates exhausted: failure, return original */
     return g;
 }
-/**
- * tries to fill a sudoku grid recursively 
- * if it does return the grid else return how it was before
- */
 
-static Grid_T sudoku_try_full(Grid_T g){
-    Choice_T c;
-    Grid_T g1, attempt;
-    int i, j, ok, full;
+Grid_T sudoku_generate(int nelts, int unique) {
+    Grid_T full, candidate, solved;
+    int    base[9][9], work[9][9], pos[81];
+    Choice_T zero = {0,0,0};
+    int d, i, j, k, m, t;
 
+    /* 1) get one complete solution */
+    memset(base, 0, sizeof base);
+    full = grid_init(full, base);
+    full = sudoku_solve(full, zero);
 
-    c.i = 0; /*initialise the cell*/
-    c.j = 0; 
-    c.n = 0; /*initialise the value*/
+    /* 2) seed RNG */
+    srand((unsigned)time(NULL) ^ (unsigned)getpid());
 
-    c = grid_iterate(g, c); /*get the first cell to fill*/
-    if(c.n == 0){ /*nothing left chec if full */
-        full = 1;
-        for(i = 0; i<N; i++){
-            if(full){
-                for(j = 0; j<N; j++){
-                    if(g.cell[i][j].choices[0] == 0){ /*if there is empty cell is not full; break*/
-                        full = 0;
-                        break;
-                    }
-                }
-                if(!full){break;} 
-            }
+    /* 3) digit‐permute to randomize the solved grid */
+    {
+      int map[10];
+      for(d=1; d<=9; d++) map[d] = d;
+      for(d=9; d>1; d--){
+        int r = rand()%d + 1;
+        int tmp = map[d]; map[d]=map[r]; map[r]=tmp;
+      }
+      for(i=0;i<9;i++)
+        for(j=0;j<9;j++){
+          int old = full.cell[i][j].choices[0];
+          full.cell[i][j].choices[0] = map[old];
         }
-        if(full){return g;} /*if full return the grid*/
     }
 
-    /*iterate for every choice*/
-    while(c.n != 0){
-        g1 = grid_update(g, c);
-        attempt = sudoku_try_full(g1);
-    
-        ok = 1;
-        for(i = 0; i<N; i++){
-            for(j = 0; j<N; j++){
-                if(attempt.cell[i][j].choices[0] == 0){
-                    ok = 0;
-                    break;
-                }
-            }
-            if(!ok){ break; }
-        }
-    
-        if(ok){return attempt;}
-    
-        /*next choice*/
-        c = grid_iterate(g, c);
+    /* 4) copy that into base[][] */
+    for(i=0;i<9;i++)
+      for(j=0;j<9;j++)
+        base[i][j] = full.cell[i][j].choices[0];
+
+    /* 5) build & shuffle hole‐positions */
+    for(k=0;k<81;k++) pos[k] = k;
+    for(k=80;k>0;k--){
+      int r = rand()%(k+1);
+      int t = pos[k]; pos[k]=pos[r]; pos[r]=t;
     }
-    
-    /*if we didnt find a good grid return g as it was*/
-    return g;
+
+    /* 6) punch holes, undo non‐unique if needed */
+    for(t=0; t<10; t++){
+      memcpy(work, base, sizeof work);
+      for(m=0; m<81-nelts; m++){
+        int x = pos[m]/9, y = pos[m]%9;
+        int backup = work[x][y];
+        work[x][y] = 0;
+        if(unique){
+          candidate = grid_init(candidate, work);
+          solved    = sudoku_solve(candidate, zero);
+          if(!grid_unique(solved))
+            work[x][y] = backup;
+        }
+      }
+      if(!unique) break;
+      candidate = grid_init(candidate, work);
+      solved    = sudoku_solve(candidate, zero);
+      if(grid_unique(solved)) break;
+    }
+
+    /* 7) return that puzzle */
+    return grid_init(full, work);
 }
-
-Grid_T sudoku_generate(int nelts, int unique){
-    Grid_T g;
-    int i, j, pcount, tries;
-    int v[N][N];
-    struct {
-        int i, j;
-    }pos[81]; /*array to store the positions of the cells*/
-
-    for(i = 0; i<N; i++){
-        for(j = 0; j<N; j++){
-            v[i][j] = 0; /*initialise the grid with 0s*/
-        }
-    }
-    g = grid_init(g, v); /*initialise the grid with the values*/
-
-    srand(getpid()); /*seed the random number generator*/
-
-    g = sudoku_try_full(g); /*try to fill the grid*/
-
-    pcount = 0;
-    for(i = 0; i<N; i++){
-        for(j = 0; j<N; j++){
-            pos[pcount].i = i; /*store the positions of the cells*/
-            pos[pcount].j = j;
-            pcount++;
-        }
-    }
-
-    for (i = pcount - 1; i > 0; i--) {
-        int r = rand() % (i + 1);
-        /* swap pos[i] <-> pos[r] */
-        int ti = pos[i].i, tj = pos[i].j;
-        pos[i].i = pos[r].i;  
-        pos[i].j = pos[r].j;
-        pos[r].i = ti;        
-        pos[r].j = tj;
-    }
-    
-    /*copy the contents of g to v to do hole-punch the v*/
-    for (i = 0; i < 9; i++) {
-        for (j = 0; j < 9; j++) {
-            v[i][j] = g.cell[i][j].choices[0];
-        }
-    }
-    /*hole-punch 81-nelts values of the grid*/
-    tries = 0;
-    do{
-        for(i = 0; i < 81 - nelts; i++){
-            int ii = pos[i].i;
-            int jj = pos[i].j;
-            int backup = v[ii][jj]; /* Backup the current value before removing it */
-        
-            v[ii][jj] = 0;
-            /* If we want the puzzle to have a unique solution */
-            if(unique){
-                Choice_T cTest;
-                Grid_T gtest;
-                Grid_T solved;
-                cTest.i = 0; 
-                cTest.j = 0;
-                cTest.n = 0; 
-                
-                gtest = grid_init(gtest, v);
-                
-                solved = sudoku_solve(gtest, cTest);
-                /* If the solved puzzle does not have a unique solution */
-                if(!grid_unique(solved)){
-                    v[ii][jj] = backup;  /* Restore the original value — don't remove this cell */
-                }
-            }
-        }
-        tries++;
-    }while(tries < 10 && !grid_unique(grid_init(g, v))); /*try to hole-punch the grid 100 times*/
-
-    g = grid_init(g, v); /*initialise the grid with the values*/
-    return g;
-}
-
 int sudoku_is_correct(Grid_T g) { /* Check puzzle correctness: no duplicate non-zero entries */
     int row[9][10] = { {0} },
         col[9][10] = { {0} },
@@ -261,66 +190,81 @@ int sudoku_is_correct(Grid_T g) { /* Check puzzle correctness: no duplicate non-
     return 1;
 }
 
-/* Print detailed conflict errors to stderr */
-void sudoku_print_errors(Grid_T g) {
-    int cnt[10];
-    int i, j, v;
-    int di, dj;
-    /* Row conflicts */
-    for (i = 0; i < 9; i++) {
-        memset(cnt, 0, sizeof(cnt));
-        for (j = 0; j < 9; j++) {
-            v = g.cell[i][j].choices[0];
-            if (v)
-                cnt[v]++;
-        }
-        for (v = 1; v <= 9; v++) {
-            if (cnt[v] > 1)
-                fprintf(stderr,
-                        "Row %d has %d duplicates of %d\n",
-                        i+1, cnt[v]-1, v);
-        }
-    }
 
-    /* Column conflicts */
-    for (j = 0; j < 9; j++) {
-        int t;
-        for(t = 0; t<10; t++){
-            cnt[t] = 0; /*initialise the count array*/
-        }
-        for (i = 0; i < 9; i++) {
-            v = g.cell[i][j].choices[0];
-            if (v)
-                cnt[v]++;
-        }
+/* Print all row/col/block conflicts in order:
+    row 1, col 1, block 1, row 2, col 2, block 2, …, row 9, col 9, block 9 */
+    void sudoku_print_errors(Grid_T g) {
+    int pos[9], pcnt;
+    int k, i, j, v;
+    int bi, bj, di, dj;
+
+    for (k = 0; k < 9; k++) {
+        /* 1) Row k */
         for (v = 1; v <= 9; v++) {
-            if (cnt[v] > 1)
-                fprintf(stderr,
-                        "Column %d has %d duplicates of %d\n",
-                        j+1, cnt[v]-1, v);
+            pcnt = 0;
+            for (j = 0; j < 9; j++) {
+                if (g.cell[k][j].choices[0] == v)
+                    pos[pcnt++] = j + 1;
+            }
+            if (pcnt > 1) {
+                fprintf(stderr, "In row %d cells %d", k+1, pos[0]);
+                if (pcnt == 2) {
+                    fprintf(stderr, " and %d", pos[1]);
+                } else {
+                    for (i = 1; i < pcnt-1; i++)
+                        fprintf(stderr, ", %d", pos[i]);
+                    fprintf(stderr, ", and %d", pos[pcnt-1]);
+                }
+                fprintf(stderr, " are the same (%d)\n", v);
+            }
         }
-    }
-    
-    /* Box conflicts */
-    for (i = 0; i < 3; i++) {
-        for (j = 0; j < 3; j++) {
-            memset(cnt, 0, sizeof(cnt));
+
+        /* 2) Column k */
+        for (v = 1; v <= 9; v++) {
+            pcnt = 0;
+            for (i = 0; i < 9; i++) {
+                if (g.cell[i][k].choices[0] == v)
+                    pos[pcnt++] = i + 1;
+            }
+            if (pcnt > 1) {
+                fprintf(stderr, "In column %d cells %d", k+1, pos[0]);
+                if (pcnt == 2) {
+                    fprintf(stderr, " and %d", pos[1]);
+                } else {
+                    for (j = 1; j < pcnt-1; j++)
+                        fprintf(stderr, ", %d", pos[j]);
+                    fprintf(stderr, ", and %d", pos[pcnt-1]);
+                }
+                fprintf(stderr, " are the same (%d)\n", v);
+            }
+        }
+
+        /* 3) Block k */
+        /* blockRow = k/3, blockCol = k%3 */
+        bi = (k/3)*3;
+        bj = (k%3)*3;
+        for (v = 1; v <= 9; v++) {
+            pcnt = 0;
             for (di = 0; di < 3; di++) {
                 for (dj = 0; dj < 3; dj++) {
-                    v = g.cell[i*3 + di][j*3 + dj].choices[0];
-                    if(v)  cnt[v]++;
+                    if (g.cell[bi+di][bj+dj].choices[0] == v)
+                        pos[pcnt++] = di*3 + dj + 1;
                 }
             }
-            for (v = 1; v <= 9; v++) {
-                if (cnt[v] > 1)
-                    fprintf(stderr,
-                            "Box %d,%d has %d duplicates of %d\n",
-                            i+1, j+1, cnt[v]-1, v);
+            if (pcnt > 1) {
+                fprintf(stderr, "In block %d cells %d", k+1, pos[0]);
+                if (pcnt == 2) {
+                    fprintf(stderr, " and %d", pos[1]);
+                } else {
+                    for (i = 1; i < pcnt-1; i++)
+                        fprintf(stderr, ", %d", pos[i]);
+                    fprintf(stderr, ", and %d", pos[pcnt-1]);
+                }
+                fprintf(stderr, " are the same (%d)\n", v);
             }
         }
     }
 }
-
 
 int  main(int argc, char *argv[]){
     Grid_T g, sol;
@@ -367,12 +311,16 @@ int  main(int argc, char *argv[]){
 
         return 0;
     }
-    else if(argc == 4 && strcmp(argv[1], "-g") == 0 ){ /*if the arguments are sudoku -g nelts -u */
-        nelts = atoi(argv[2]); /*get the number of elements*/
-        unique_flag = (argv[3] && strcmp(argv[3], "-u") == 0);
-
-        g = sudoku_generate(nelts, unique_flag); /*generate the grid*/
-        sudoku_print(stdout, g); /*print the grid*/
+    else if (strcmp(argv[1], "-g") == 0) {
+        if (argc < 3 || argc > 4) {
+            fprintf(stderr, "Usage: %s -g nelts [-u]\n", argv[0]);
+            return 1;
+        }
+        nelts = atoi(argv[2]);
+        unique_flag = (argc == 4 && strcmp(argv[3], "-u") == 0);
+    
+        g = sudoku_generate(nelts, unique_flag);
+        sudoku_print(stdout, g);
         return 0;
     }
     return 0;

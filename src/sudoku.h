@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <time.h>
 #define N 9
 
 Grid_T sudoku_generate(int nelts, int unique);	/* Generate and return a sudoku puzzle with "approximately" nelts
