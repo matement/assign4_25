@@ -52,4 +52,5 @@ $(BUILD_DIR):
 
 clean:
 	rm -rf $(BUILD_DIR) $(EXEC)
+	rm -f $(DEPS) $(SRC_DIR)/*.o
 
